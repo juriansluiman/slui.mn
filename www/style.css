@@ -1,0 +1,79 @@
+@charset 'UTF-8';
+@font-face{
+  font-family:"Myriad W01 Lt";
+  src:url("fonts/myriad.eot?#iefix");
+  src:url("fonts/myriad.eot?#iefix") format("eot"),url("fonts/myriad.woff") format("woff"),url("fonts/myriad.ttf") format("truetype"),url("fonts/myriad.svg#myriad") format("svg");
+}
+
+html {
+  font-family: sans-serif;
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  font-size: 62.5%;
+}
+body {
+  margin: 0;
+}
+
+main {
+  display: block;
+}
+
+.container {
+  position: relative;
+  width: 100%;
+  max-width: 575px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 400px) {
+  .container {
+    width: 85%;
+    padding: 0;
+  }
+}
+
+@media (min-width: 550px) {
+  .container {
+    width: 80%;
+  }
+}
+
+.container:after,
+.row:after,
+.u-cf {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+h1 {
+    font-family: 'Myriad W01 Lt', Helvetica, Verdana, sans-serif;
+    letter-spacing: 0;
+    margin-top: 1rem;
+    font-size: 3.6rem;
+    margin-bottom: 2rem;
+    font-weight: 300;
+}
+
+@media (min-width: 550px) {
+  h1 {
+    font-size: 5.0rem;
+  }
+}
+
+a {
+    text-decoration: none;
+    color: #222;
+    background-color: transparent;
+}
+
+a:active,
+a:hover {
+  outline: 0;
+  color: #222;
+}
+
+
