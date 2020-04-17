@@ -14,5 +14,6 @@ jobs:
     - name: Execute Ansible Playbook
       uses: saubermacherag/ansible-playbook-docker-action@v1.3
       with:
-        playbookName: .github/workflows/playbook.yml
+        playbookName: .github/playbook.yml
+        inventoryFile: .github/inventory
         verbosity: vv
