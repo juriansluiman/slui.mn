@@ -1,0 +1,101 @@
+---
+- hosts: nuala.slui.mn
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    user: www-data
+    group: docker
+    www_dir: /var/www
+    docker_namespace: sluimn
+
+  tasks:
+    - name: Define project tag
+      set_fact: project_tag={{ '%Y%m%d%H%M' | strftime }}
+
+    - name: Get current working directory
+      set_fact: "local_dir={{ lookup('env', 'PWD') }}"
+
+    - name: Get leaf directory from local_dir path
+      set_fact: "project_name={{ local_dir.split('/')[-1] }}"
+
+    - name: Set remote working directory
+      set_fact: "remote_dir={{ www_dir }}/{{ project_name }}"
+
+    - name: Set image name based on project name
+      set_fact: "image_name={{ docker_namespace }}/{{ project_name }}"
+
+    - name: Define docker container name
+      set_fact: docker_container_name={{ project_name | replace('.', '') }}
+
+    - name: Build local docker image
+      local_action: "command docker build -t {{ image_name }}:{{ project_tag }} {{ local_dir }}"
+      become_user: jurian
+      register: out
+    
+    - name: Output result of hugo build
+      debug: var=out.stdout_lines
+
+    - name: Create local tarbal from image
+      local_action: "command docker save -o {{ local_dir }}/{{ project_name }}.tar {{ image_name }}:{{ project_tag }}"
+      become_user: jurian
+
+    - name: Cleanup local docker image
+      local_action: "command docker image prune -a"
+      become_user: jurian
+
+    - name: Create project directory
+      file:
+        path: "{{ remote_dir }}"
+        state: directory
+        owner: www-data
+        group: docker
+        mode: 0755 
+
+    - name: Copy docker tarbal to web host
+      copy:
+        src: "{{ local_dir }}/{{ project_name }}.tar"
+        dest: "{{ remote_dir }}/{{ project_name }}.tar"
+
+    - name: Load docker image from tarbal
+      docker_image:
+        name: "{{ image_name }}"
+        source: load
+        load_path: "{{ remote_dir }}/{{ project_name }}.tar"
+        tag: "{{ project_tag }}"
+
+    # Find out if there's another way to do blue/green migrations
+    - name: Get info on container
+      docker_container_info:
+        name: "/{{ docker_container_name }}"
+      register: result
+
+    - name: Stop container if running
+      docker_container:
+        name: "{{ docker_container_name }}"
+        state: stopped
+      when: result.exists
+
+    - name: Run docker container
+      docker_container:
+        name: "{{ docker_container_name }}"
+        image: "{{ image_name }}:{{ project_tag }}"
+        labels: "{
+          'traefik.http.routers.{{ docker_container_name }}_http.entrypoints': 'web',
+          'traefik.http.routers.{{ docker_container_name }}_http.rule': 'Host(`{{ project_name }}`)',
+          'traefik.http.routers.{{ docker_container_name }}_http.middlewares': 'redirect-to-https',
+
+          'traefik.http.routers.{{ docker_container_name }}.entrypoints': 'websecure',
+          'traefik.http.routers.{{ docker_container_name }}.rule': 'Host(`{{ project_name }}`)',
+          'traefik.http.routers.{{ docker_container_name }}.tls': 'true',
+          'traefik.http.routers.{{ docker_container_name }}.tls.certresolver': 'le'
+        }"
+        # CLI compatibility is default in Ansible 2.12 (not yet released) and below rule suppresses warning
+        networks_cli_compatible: yes
+        networks:
+          - name: web
+        purge_networks: yes
+        restart_policy: unless-stopped
+
+    # This does not remove all unused images yet
+    - name: Prune unused images
+      docker_prune:
+        images: yes
