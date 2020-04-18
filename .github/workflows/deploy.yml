@@ -18,5 +18,5 @@ jobs:
         inventoryFile: .github/inventory
         keyFile: ".github/key.pem"
         keyFileVaultPass: ${{ secrets.KEYFILE_VAULT_PASS }}
-        extraVars: "-e ansible_python_interpreter=/usr/bin/python3 -e ansible_user=github -e ansible_become=true -e ansible_become_pass=${{ secrets.SSH_PASSWORD }}"
+        extraVars: "-e ansible_user=github -e ansible_become=true -e ansible_become_pass=${{ secrets.SSH_PASSWORD }}"
         verbosity: vv
