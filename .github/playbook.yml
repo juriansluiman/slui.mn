@@ -8,14 +8,33 @@
     docker_namespace: sluimn
 
   tasks:
+    - name: Get current working directory
+      set_fact: "local_dir={{ lookup('env', 'PWD') }}"
+    
+    - name: Load project metadata
+      include_vars: "{{ lookup('first_found', possible_files) }}"
+      vars:
+        possible_files:
+          - "{{ local_dir }}/deploy.yml"
+          - "{{ local_dir }}/.deploy.yml"
+          - "{{ local_dir }}/.github/deploy.yml"
+          - "{{ local_dir }}/.github/.deploy.yml"
+
+    - name: Check if hostnames are present
+      fail:
+        msg: "At least a hostname must be available in deployment metadata"
+      when: hostname is undefined
+
     - name: Define project tag
       set_fact: project_tag={{ '%Y%m%d%H%M' | strftime }}
 
-    - name: Get current working directory
-      set_fact: "local_dir={{ lookup('env', 'PWD') }}"
+    - name: Get project name from single hostname
+      set_fact: "project_name={{ hostname }}"
+      when: hostname is string
 
-    - name: Get leaf directory from local_dir path
-      set_fact: "project_name={{ local_dir.split('/')[-1] }}"
+    - name: Get project name from primary hostname in list
+      set_fact: "project_name={{ hostname[0] }}"
+      when: hostname is iterable and hostname is not string
 
     - name: Set remote working directory
       set_fact: "remote_dir={{ www_dir }}/{{ project_name }}"
@@ -28,7 +47,6 @@
 
     - name: Build local docker image
       local_action: "command docker build -t {{ image_name }}:{{ project_tag }} {{ local_dir }}"
-      become_user: jurian
       register: out
     
     - name: Output result of hugo build
@@ -36,11 +54,9 @@
 
     - name: Create local tarbal from image
       local_action: "command docker save -o {{ local_dir }}/{{ project_name }}.tar {{ image_name }}:{{ project_tag }}"
-      become_user: jurian
 
     - name: Cleanup local docker image
       local_action: "command docker image prune -a"
-      become_user: jurian
 
     - name: Create project directory
       file:
@@ -62,6 +78,18 @@
         load_path: "{{ remote_dir }}/{{ project_name }}.tar"
         tag: "{{ project_tag }}"
 
+    - name: Make sure hostname is encapsulated in backticks for single hosts
+      set_fact: "hostname=`{{ hostname }}`"
+      when: hostname is string
+
+    - name: Make sure hostnames are encapsulated in backticks for multiple hosts
+      set_fact: 'hostname={{ hostname | map("regex_replace", "^(.*)$", "`\1`") | list }}'
+      when: hostname is iterable and hostname is not string
+
+    - name: Make sure hostnames are joined comma separated
+      set_fact: "hostname={{ hostname | join(',') }}"
+      when: hostname is iterable and hostname is not string
+
     # Find out if there's another way to do blue/green migrations
     - name: Get info on container
       docker_container_info:
@@ -80,11 +108,11 @@
         image: "{{ image_name }}:{{ project_tag }}"
         labels: "{
           'traefik.http.routers.{{ docker_container_name }}_http.entrypoints': 'web',
-          'traefik.http.routers.{{ docker_container_name }}_http.rule': 'Host(`{{ project_name }}`)',
+          'traefik.http.routers.{{ docker_container_name }}_http.rule': 'Host({{ hostname }})',
           'traefik.http.routers.{{ docker_container_name }}_http.middlewares': 'redirect-to-https',
 
           'traefik.http.routers.{{ docker_container_name }}.entrypoints': 'websecure',
-          'traefik.http.routers.{{ docker_container_name }}.rule': 'Host(`{{ project_name }}`)',
+          'traefik.http.routers.{{ docker_container_name }}.rule': 'Host({{ hostname }})',
           'traefik.http.routers.{{ docker_container_name }}.tls': 'true',
           'traefik.http.routers.{{ docker_container_name }}.tls.certresolver': 'le'
         }"
