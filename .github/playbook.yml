@@ -14,6 +14,10 @@
       debug:
         msg: "Local PWD set to {{ local_dir }}"
 
+    - name: Show env vars and external set var"
+      debug:
+        msg: "Env is set to {{ lookup('env','GITHUB_WORKSPACE') }} and repo_dir is {{ repo_dir }}"
+
     - name: Load project metadata
       include_vars: "{{ lookup('first_found', possible_files) }}"
       vars:
