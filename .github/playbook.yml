@@ -7,9 +7,6 @@
     docker_namespace: sluimn
 
   tasks:
-    - name: Get current working directory
-      set_fact: "local_dir={{ lookup('env', 'PWD') }}"
-    
     - name: Load project metadata
       include_vars: "{{ lookup('first_found', possible_files) }}"
       vars:
