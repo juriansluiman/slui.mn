@@ -7,6 +7,10 @@
     docker_namespace: sluimn
 
   tasks:
+    - name: Show local working directory
+      debug:
+        msg: "Local PWD set to {{ local_dir }}"
+
     - name: Load project metadata
       include_vars: "{{ lookup('first_found', possible_files) }}"
       vars:
