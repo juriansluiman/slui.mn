@@ -18,13 +18,27 @@
       debug:
         msg: "Env is set to {{ lookup('env','GITHUB_WORKSPACE') }} and repo_dir is {{ repo_dir }}"
 
-    - name: Display Dockerfile contents
-      debug: var=item
-      with_file:
-        - "{{ repo_dir }}/deploy.yml"
-        - "{{ lookup('env','GITHUB_WORKSPACE') }}/deploy.yml"
-        - "{{ repo_dir }}/Dockerfile"
-        - "{{ lookup('env','GITHUB_WORKSPACE') }}/Dockerfile"
+    - name: Show env vars and external set var"
+      local_action: "command ls {{ repo_dir }}"
+      register: out1
+    
+    - name: Output result of ls repo_dir
+      debug: var=out1.stdout_lines
+    
+    - name: Show env vars and external set var"
+      local_action: "command ls {{ lookup('env','GITHUB_WORKSPACE') }}"
+      register: out2
+    
+    - name: Output result of ls env
+      debug: var=out2.stdout_lines
+
+    # - name: Display Dockerfile contents
+    #   debug: var=item
+    #   with_file:
+    #     - "{{ repo_dir }}/deploy.yml"
+    #     - "{{ lookup('env','GITHUB_WORKSPACE') }}/deploy.yml"
+    #     - "{{ repo_dir }}/Dockerfile"
+    #     - "{{ lookup('env','GITHUB_WORKSPACE') }}/Dockerfile"
 
     - name: Load project metadata
       include_vars: "{{ lookup('first_found', possible_files) }}"
