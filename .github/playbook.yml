@@ -18,6 +18,14 @@
       debug:
         msg: "Env is set to {{ lookup('env','GITHUB_WORKSPACE') }} and repo_dir is {{ repo_dir }}"
 
+    - name: Display Dockerfile contents
+      debug: var=item
+      with_file:
+        - "{{ repo_dir }}/deploy.yml"
+        - "{{ lookup('env','GITHUB_WORKSPACE') }}/deploy.yml"
+        - "{{ repo_dir }}/Dockerfile"
+        - "{{ lookup('env','GITHUB_WORKSPACE') }}/Dockerfile"
+
     - name: Load project metadata
       include_vars: "{{ lookup('first_found', possible_files) }}"
       vars:
