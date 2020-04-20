@@ -7,6 +7,9 @@
     docker_namespace: sluimn
 
   tasks:
+    - name: Get current working directory
+      set_fact: "local_dir={{ lookup('env', 'PWD') }}"
+
     - name: Show local working directory
       debug:
         msg: "Local PWD set to {{ local_dir }}"
@@ -46,7 +49,7 @@
       set_fact: docker_container_name={{ project_name | replace('.', '') }}
 
     - name: Build local docker image
-      local_action: "command docker build -t {{ image_name }}:{{ project_tag }} {{ local_dir }}"
+      local_action: "command docker build -t {{ image_name }}:{{ project_tag }} {{ repo_dir }}"
       register: out
     
     - name: Output result of hugo build
